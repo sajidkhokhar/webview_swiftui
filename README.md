@@ -129,6 +129,56 @@ struct MyView: View {
 
 ---
 
+### Option 4 — Paywall / premium screen (with Restore button)
+
+`PolicyLinksView` accepts an optional `restoreAction` closure. When provided, a **Restore** button is prepended to the row automatically. When omitted the row shows only Privacy Policy and Terms of Use — no conditional logic needed at the call site.
+
+```swift
+import SwiftUI
+import StoreKit
+
+struct PaywallView: View {
+    var body: some View {
+        VStack {
+            // ... pricing cards, feature list, subscribe button ...
+
+            // Restore • Privacy Policy • Terms of Use
+            PolicyLinksView(
+                restoreAction: {
+                    Task { try? await AppStore.sync() }
+                }
+            )
+        }
+    }
+}
+```
+
+Custom styling to match a dark paywall background:
+
+```swift
+PolicyLinksView(
+    tintColor:     .white.opacity(0.5),
+    fontSize:      12,
+    restoreAction: {
+        Task { try? await AppStore.sync() }
+    }
+)
+```
+
+**Row output with `restoreAction` provided:**
+```
+Restore • Privacy Policy • Terms of Use
+```
+
+**Row output without `restoreAction` (sign-up, settings — default):**
+```
+Privacy Policy • Terms of Use
+```
+
+> **App Store guideline note:** Apple's review guidelines require a visible "Restore Purchases" option on every paywall. Passing `restoreAction` to `PolicyLinksView` satisfies this — the button appears in the same footer row as your legal links so you don't need a separate UI element.
+
+---
+
 ## Adding more pages
 
 Add a new case to `LegalDocument` and provide its URL:
