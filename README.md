@@ -134,7 +134,6 @@ struct MyView: View {
 | No internet | Offline icon shown; reloads **automatically** when connection restores |
 | Load error | Error icon + "Try Again" button; tapping reloads the page |
 | Long-press on a link | URL tooltip suppressed |
-| Tapping an external link | Navigation blocked; user stays on the policy page |
 
 ---
 
