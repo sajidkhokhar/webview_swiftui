@@ -24,9 +24,9 @@ enum LegalDocument: String, Identifiable {
     var url: URL {
         switch self {
         case .privacy:
-            return URL(string: "ADD_YOUR_PRIVACY_POLICY_URL_HERE")!
+            return URL(string: "https://maximaapps.com/policy/privacy_policy.html")!
         case .terms:
-            return URL(string: "ADD_YOUR_TERMS_OF_USE_URL_HERE")!
+            return URL(string: "https://maximaapps.com/policy/terms_of_use.html")!
         }
     }
 
@@ -54,13 +54,10 @@ struct WebViewSheet: View {
 
     var body: some View {
         ZStack {
-            AppColors.Background.primary.ignoresSafeArea()
+            Color.primary.ignoresSafeArea()
 
             VStack(spacing: 0) {
-
-                // ── Content ───────────────────────────────────────────────────
                 ZStack {
-                    // Web view — always in hierarchy so it keeps its scroll position
                     WebViewRepresentable(
                         url:       document.url,
                         isLoading: $isLoading,
@@ -68,20 +65,9 @@ struct WebViewSheet: View {
                     )
                     .opacity(isLoading || hasError || !isConnected ? 0 : 1)
 
-                    // Loading state
-                    if isLoading && isConnected && !hasError {
-                        loadingView
-                    }
-
-                    // No internet state
-                    if !isConnected {
-                        noInternetView
-                    }
-
-                    // Load error state (connected but page failed)
-                    if hasError && isConnected {
-                        errorView
-                    }
+                    if isLoading && isConnected && !hasError { loadingView    }
+                    if !isConnected                          { noInternetView }
+                    if hasError && isConnected               { errorView      }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -91,7 +77,6 @@ struct WebViewSheet: View {
         .onReceive(monitor.$isConnected) { connected in
             let wasDisconnected = !isConnected
             isConnected = connected
-            // Auto-retry when connection is restored
             if connected && wasDisconnected {
                 hasError  = false
                 isLoading = true
@@ -106,10 +91,10 @@ struct WebViewSheet: View {
             ProgressView()
                 .progressViewStyle(.circular)
                 .scaleEffect(1.1)
-                .tint(AppColors.Text.secondary)
+                .tint(.secondary)
             Text("Loading…")
                 .font(.custom("HostGrotesk-Medium", size: 14))
-                .foregroundStyle(AppColors.Text.tertiary)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -120,19 +105,19 @@ struct WebViewSheet: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(AppColors.Background.secondary)
+                    .fill(.secondary)
                     .frame(width: 80, height: 80)
                 Image(systemName: "wifi.slash")
                     .font(.system(size: 30, weight: .medium))
-                    .foregroundStyle(AppColors.Text.tertiary)
+                    .foregroundStyle(.tertiary)
             }
             VStack(spacing: 8) {
                 Text("No Internet Connection")
                     .font(.custom("HostGrotesk-SemiBold", size: 17))
-                    .foregroundStyle(AppColors.Text.primary)
+                    .foregroundStyle(.primary)
                 Text("Please check your connection.\nThe page will reload automatically when you're back online.")
                     .font(.custom("HostGrotesk-Regular", size: 14))
-                    .foregroundStyle(AppColors.Text.tertiary)
+                    .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .padding(.horizontal, 32)
@@ -147,19 +132,19 @@ struct WebViewSheet: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(AppColors.Background.secondary)
+                    .fill(.secondary)
                     .frame(width: 80, height: 80)
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 30, weight: .medium))
-                    .foregroundStyle(AppColors.Text.tertiary)
+                    .foregroundStyle(.tertiary)
             }
             VStack(spacing: 8) {
                 Text("Couldn't Load Page")
                     .font(.custom("HostGrotesk-SemiBold", size: 17))
-                    .foregroundStyle(AppColors.Text.primary)
+                    .foregroundStyle(.primary)
                 Text("Something went wrong. Please try again.")
                     .font(.custom("HostGrotesk-Regular", size: 14))
-                    .foregroundStyle(AppColors.Text.tertiary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             Button {
@@ -190,23 +175,18 @@ private struct WebViewRepresentable: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIView(context: Context) -> WKWebView {
-        let config                              = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback        = true
+        let config                   = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
 
-        let webView                             = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate              = context.coordinator
+        let webView                  = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate   = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        webView.allowsLinkPreview    = false   // suppresses URL tooltip on long-press
 
-        // ── Hide all browser chrome ───────────────────────────────────────────
-        // Inject CSS that removes any potential address bars, toolbars, or
-        // browser-injected UI elements that WKWebView might surface.
-        let css = """
-        ::-webkit-scrollbar { display: none !important; }
-        """
         let script = WKUserScript(
             source: """
             var s = document.createElement('style');
-            s.textContent = `\(css)`;
+            s.textContent = '::-webkit-scrollbar{display:none!important}';
             document.head.appendChild(s);
             """,
             injectionTime: .atDocumentEnd,
@@ -214,15 +194,11 @@ private struct WebViewRepresentable: UIViewRepresentable {
         )
         webView.configuration.userContentController.addUserScript(script)
 
-        // Disable long-press link previews (hides URL on hold)
-        webView.allowsLinkPreview = false
-
         webView.load(URLRequest(url: url))
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // Reload when isLoading is reset to true (retry tap or reconnect)
         if isLoading && !webView.isLoading {
             webView.load(URLRequest(url: url))
         }
@@ -234,67 +210,31 @@ private struct WebViewRepresentable: UIViewRepresentable {
 
         var parent: WebViewRepresentable
 
-        init(_ parent: WebViewRepresentable) {
-            self.parent = parent
-        }
+        init(_ parent: WebViewRepresentable) { self.parent = parent }
 
-        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
             parent.isLoading = true
             parent.hasError  = false
         }
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {
             parent.isLoading = false
             parent.hasError  = false
-
-            // Inject JS to hide any remaining browser-specific elements and
-            // ensure the URL bar / navigation controls are never visible.
-            let js = """
-            // Remove any fixed headers that look like browser chrome
-            document.querySelectorAll('[class*="toolbar"],[class*="navbar"],[class*="address"],[id*="toolbar"],[id*="header"]')
-                .forEach(function(el) {
-                    var style = window.getComputedStyle(el);
-                    if (style.position === 'fixed' || style.position === 'sticky') {
-                        el.style.display = 'none';
-                    }
-                });
-            """
-            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
-        func webView(_ webView: WKWebView,
-                     didFail navigation: WKNavigation!,
-                     withError error: Error) {
-            let nsError = error as NSError
-            // -999 = cancelled (e.g. fast back tap) — not a real error
-            guard nsError.code != NSURLErrorCancelled else { return }
+        func webView(_ webView: WKWebView, didFail _: WKNavigation!, withError error: Error) {
+            guard (error as NSError).code != NSURLErrorCancelled else { return }
             parent.isLoading = false
             parent.hasError  = true
         }
 
-        func webView(_ webView: WKWebView,
-                     didFailProvisionalNavigation navigation: WKNavigation!,
-                     withError error: Error) {
-            let nsError = error as NSError
-            guard nsError.code != NSURLErrorCancelled else { return }
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error) {
+            guard (error as NSError).code != NSURLErrorCancelled else { return }
             parent.isLoading = false
             parent.hasError  = true
         }
 
-        // Block all navigation away from the target URL — user can't click
-        // links that would open other pages or external apps.
-        func webView(_ webView: WKWebView,
-                     decidePolicyFor navigationAction: WKNavigationAction,
-                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            // Allow the initial load and same-page anchor navigation
-            if navigationAction.navigationType == .other ||
-               navigationAction.navigationType == .reload ||
-               navigationAction.request.url?.host == parent.url.host {
-                decisionHandler(.allow)
-            } else {
-                decisionHandler(.cancel)
-            }
-        }
+        // No decidePolicyFor — all link navigation is allowed freely.
     }
 }
 
@@ -329,7 +269,7 @@ private struct WebViewSheetModifier: ViewModifier {
                 WebViewSheet(document: doc)
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(UIScreen.main.displayCorner(minimum: 28))
-                    .presentationBackground(AppColors.Background.primary)
+                    .presentationBackground(.primary)
             }
     }
 }
@@ -344,16 +284,14 @@ extension View {
 
 struct PolicyLinksView: View {
 
-    var tintColor:     Color       = AppColors.Text.tertiary
-    var fontSize:      CGFloat     = 12
-    var restoreAction: (() -> Void)? = nil   // optional — shown only when provided
+    var tintColor:     Color          = .primary
+    var fontSize:      CGFloat        = 12
+    var restoreAction: (() -> Void)?  = nil
 
     @State private var shownDoc: LegalDocument? = nil
 
     var body: some View {
         HStack(spacing: 4) {
-         
-
             policyButton(.privacy)
 
             Text("•")
@@ -361,13 +299,12 @@ struct PolicyLinksView: View {
                 .foregroundStyle(tintColor.opacity(0.5))
 
             policyButton(.terms)
-            
+
             if let restore = restoreAction {
-                
                 Text("•")
                     .font(.system(size: fontSize))
                     .foregroundStyle(tintColor.opacity(0.5))
-                
+
                 Button(action: restore) {
                     Text("Restore")
                         .font(.system(size: fontSize))
@@ -396,8 +333,8 @@ struct PolicyLinksView: View {
 struct PolicyLinkText: View {
 
     var fontSize:  CGFloat = 12
-    var textColor: Color   = AppColors.Text.tertiary
-    var linkColor: Color   = AppColors.Text.secondary
+    var textColor: Color   = .primary
+    var linkColor: Color   = .secondary
 
     @State private var shownDoc: LegalDocument? = nil
 
@@ -418,7 +355,6 @@ struct PolicyLinkText: View {
         }
         .font(.custom("HostGrotesk-Regular", size: fontSize))
         .multilineTextAlignment(.center)
-        // AttributedString doesn't support Button — overlay tappable areas instead
         .overlay(
             HStack(spacing: 0) {
                 Color.clear
