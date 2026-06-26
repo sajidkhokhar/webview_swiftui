@@ -344,18 +344,38 @@ extension View {
 
 struct PolicyLinksView: View {
 
-    var tintColor: Color   = AppColors.Text.tertiary
-    var fontSize:  CGFloat = 12
+    var tintColor:     Color       = AppColors.Text.tertiary
+    var fontSize:      CGFloat     = 12
+    var restoreAction: (() -> Void)? = nil   // optional — shown only when provided
 
     @State private var shownDoc: LegalDocument? = nil
 
     var body: some View {
         HStack(spacing: 4) {
+         
+
             policyButton(.privacy)
-            Text("·")
-                .font(.custom("HostGrotesk-Regular", size: fontSize))
+
+            Text("•")
+                .font(.system(size: fontSize))
                 .foregroundStyle(tintColor.opacity(0.5))
+
             policyButton(.terms)
+            
+            if let restore = restoreAction {
+                
+                Text("•")
+                    .font(.system(size: fontSize))
+                    .foregroundStyle(tintColor.opacity(0.5))
+                
+                Button(action: restore) {
+                    Text("Restore")
+                        .font(.system(size: fontSize))
+                        .foregroundStyle(tintColor)
+                        .underline(color: tintColor.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
         }
         .webViewSheet(item: $shownDoc)
     }
@@ -363,7 +383,7 @@ struct PolicyLinksView: View {
     private func policyButton(_ doc: LegalDocument) -> some View {
         Button { shownDoc = doc } label: {
             Text(doc.title)
-                .font(.custom("HostGrotesk-Medium", size: fontSize))
+                .font(.system(size: fontSize))
                 .foregroundStyle(tintColor)
                 .underline(color: tintColor.opacity(0.4))
         }
